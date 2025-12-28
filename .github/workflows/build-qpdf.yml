@@ -49,10 +49,10 @@ jobs:
                   cd libjpeg-turbo-src
                   mkdir build && cd build
                   cmake .. \
-                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
-                    -DANDROID_STL=c++_shared \
+                    -DANDROID_TOOLCHAIN=clang \
+                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.arch }} \
                     -DENABLE_SHARED=ON \
@@ -67,16 +67,12 @@ jobs:
                   mkdir build && cd build
 
                   cmake .. \
-                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
-                    -DANDROID_STL=c++_shared \
+                    -DANDROID_TOOLCHAIN=clang \
+                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
-                    -DCMAKE_FIND_ROOT_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
-                    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
-                    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
-                    -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
