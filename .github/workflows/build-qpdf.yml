@@ -52,6 +52,7 @@ jobs:
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
+                    -DANDROID_STL=c++_shared \
                     -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.arch }} \
                     -DENABLE_SHARED=ON \
@@ -65,15 +66,20 @@ jobs:
                   cd qpdf-src
                   mkdir build && cd build
 
-                  export CMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }}
+                  CMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }}
                   export LDFLAGS="-L${{ github.workspace }}/deps-${{ matrix.arch }}/lib"
+
                   cmake .. \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
+                    -DANDROID_STL=c++_shared \
                     -DCMAKE_BUILD_TYPE=Release \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
+                    -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} \
+                    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
+                    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
                     ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
