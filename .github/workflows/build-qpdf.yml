@@ -76,12 +76,13 @@ jobs:
                   mkdir -p artifacts/android-${{ matrix.arch }}
                   find qpdf-src/build/libqpdf -name "*.a" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
                   find ${{ github.workspace }}/deps-${{ matrix.arch }} -name "*.a" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
+                  tar -cvhf artifacts/android-${{ matrix.arch }}.tar -C artifacts android-${{ matrix.arch }}
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-android-${{ matrix.arch }}
-                  path: artifacts/android-${{ matrix.arch }}
+                  path: artifacts/android-${{ matrix.arch }}.tar
 
     # ============================================================================
     # iOS Builds
@@ -138,14 +139,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-device-arm64
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-device-arm64/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/ios-device-arm64/ \;
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/ios-device-arm64/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/ios-device-arm64/ \;
+                  tar -cvhf artifacts/ios-device-arm64.tar -C artifacts ios-device-arm64
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-ios-device-arm64
-                  path: artifacts/ios-device-arm64
+                  path: artifacts/ios-device-arm64.tar
 
     build-ios-simulator:
         name: iOS Simulator (${{ matrix.arch }})
@@ -209,14 +211,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-simulator-${{ matrix.artifact_name }}
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
+                  tar -cvhf artifacts/ios-simulator-${{ matrix.artifact_name }}.tar -C artifacts ios-simulator-${{ matrix.artifact_name }}
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-ios-simulator-${{ matrix.artifact_name }}
-                  path: artifacts/ios-simulator-${{ matrix.artifact_name }}
+                  path: artifacts/ios-simulator-${{ matrix.artifact_name }}.tar
 
     build-ios-catalyst:
         name: iOS Catalyst (${{ matrix.arch }})
@@ -277,14 +280,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-catalyst-${{ matrix.artifact_name }}
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
+                  tar -cvhf artifacts/ios-catalyst-${{ matrix.artifact_name }}.tar -C artifacts ios-catalyst-${{ matrix.artifact_name }}
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-ios-catalyst-${{ matrix.artifact_name }}
-                  path: artifacts/ios-catalyst-${{ matrix.artifact_name }}
+                  path: artifacts/ios-catalyst-${{ matrix.artifact_name }}.tar
 
     # ============================================================================
     # Linux Builds
@@ -321,12 +325,13 @@ jobs:
                   mkdir -p artifacts/linux-x64
                   find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x64/ \;
                   cp -P /usr/lib/x86_64-linux-gnu/libjpeg.so* artifacts/linux-x64/ || true
+                  tar -cvhf artifacts/linux-x64.tar -C artifacts linux-x64
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-linux-x64
-                  path: artifacts/linux-x64
+                  path: artifacts/linux-x64.tar
 
     build-linux-arm64:
         name: Linux (arm64)
@@ -360,12 +365,13 @@ jobs:
                   mkdir -p artifacts/linux-arm64
                   find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-arm64/ \;
                   cp -P /usr/lib/aarch64-linux-gnu/libjpeg.so* artifacts/linux-arm64/ || true
+                  tar -cvhf artifacts/linux-arm64.tar -C artifacts linux-arm64
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-linux-arm64
-                  path: artifacts/linux-arm64
+                  path: artifacts/linux-arm64.tar
 
     build-linux-x86:
         name: Linux (x86)
@@ -402,12 +408,13 @@ jobs:
                   mkdir -p artifacts/linux-x86
                   find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x86/ \;
                   cp -P /usr/lib/i386-linux-gnu/libjpeg.so* artifacts/linux-x86/ || true
+                  tar -cvhf artifacts/linux-x86.tar -C artifacts linux-x86
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-linux-x86
-                  path: artifacts/linux-x86
+                  path: artifacts/linux-x86.tar
 
     # ============================================================================
     # macOS Builds
@@ -465,14 +472,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/macos-${{ matrix.arch }}
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/macos-${{ matrix.arch }}/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/macos-${{ matrix.arch }}/ \;
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/macos-${{ matrix.arch }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/macos-${{ matrix.arch }}/ \;
+                  tar -cvhf artifacts/macos-${{ matrix.arch }}.tar -C artifacts macos-${{ matrix.arch }}
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-macos-${{ matrix.arch }}
-                  path: artifacts/macos-${{ matrix.arch }}
+                  path: artifacts/macos-${{ matrix.arch }}.tar
 
     build-macos-universal:
         name: macOS (universal)
@@ -483,20 +491,27 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: qpdf-macos-arm64
-                  path: macos-arm64
+                  path: downloads
 
             - name: Download x64 Artifacts
               uses: actions/download-artifact@v4
               with:
                   name: qpdf-macos-x64
-                  path: macos-x64
+                  path: downloads
+
+            - name: Extract Artifacts
+              run: |
+                  mkdir -p extracted
+                  for tarfile in downloads/*.tar; do
+                    tar -xvf "$tarfile" -C extracted
+                  done
 
             - name: Create Universal Binaries
               run: |
                   mkdir -p artifacts/macos-univ
 
                   # Get list of dylibs from arm64 (excluding symlinks)
-                  for lib in macos-arm64/*.dylib; do
+                  for lib in extracted/macos-arm64/*.dylib; do
                     libname=$(basename "$lib")
                     # Skip symlinks
                     if [[ -L "$lib" ]]; then
@@ -504,16 +519,16 @@ jobs:
                     fi
                     
                     # Check if corresponding x64 lib exists
-                    if [[ -f "macos-x64/$libname" ]]; then
+                    if [[ -f "extracted/macos-x64/$libname" ]]; then
                       lipo -create \
-                        "macos-arm64/$libname" \
-                        "macos-x64/$libname" \
+                        "extracted/macos-arm64/$libname" \
+                        "extracted/macos-x64/$libname" \
                         -output "artifacts/macos-univ/$libname"
                     fi
                   done
 
                   # Recreate symlinks
-                  for link in macos-arm64/*.dylib; do
+                  for link in extracted/macos-arm64/*.dylib; do
                     if [[ -L "$link" ]]; then
                       linkname=$(basename "$link")
                       target=$(readlink "$link")
@@ -530,11 +545,14 @@ jobs:
                     fi
                   done
 
+                  # Create tar for upload
+                  tar -cvhf artifacts/macos-univ.tar -C artifacts macos-univ
+
             - name: Upload Universal Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-macos-univ
-                  path: artifacts/macos-univ
+                  path: artifacts/macos-univ.tar
 
     # ============================================================================
     # Combine All Artifacts
@@ -559,57 +577,77 @@ jobs:
               with:
                   path: all-artifacts
 
+            - name: Extract All Tarballs
+              run: |
+                  mkdir -p extracted
+                  for tarfile in all-artifacts/*/*.tar; do
+                    echo "Extracting $tarfile"
+                    tar -xvf "$tarfile" -C extracted
+                  done
+                  echo "=== Extracted contents ==="
+                  ls -la extracted/
+
             - name: Organize Artifacts
               run: |
                   mkdir -p release/{android,ios,linux,macos}
 
                   # Android
                   for arch in arm arm64 x64 x86; do
-                    if [ -d "all-artifacts/qpdf-android-$arch" ]; then
+                    if [ -d "extracted/android-$arch" ]; then
                       mkdir -p release/android/$arch
-                      cp -r all-artifacts/qpdf-android-$arch/* release/android/$arch/
+                      cp -P extracted/android-$arch/* release/android/$arch/
                     fi
                   done
 
                   # iOS
                   mkdir -p release/ios/{catalyst,device,simulator}
                   for arch in arm64 x64; do
-                    if [ -d "all-artifacts/qpdf-ios-catalyst-$arch" ]; then
+                    if [ -d "extracted/ios-catalyst-$arch" ]; then
                       mkdir -p release/ios/catalyst/$arch
-                      cp -r all-artifacts/qpdf-ios-catalyst-$arch/* release/ios/catalyst/$arch/
+                      cp -P extracted/ios-catalyst-$arch/* release/ios/catalyst/$arch/
                     fi
-                    if [ -d "all-artifacts/qpdf-ios-simulator-$arch" ]; then
+                    if [ -d "extracted/ios-simulator-$arch" ]; then
                       mkdir -p release/ios/simulator/$arch
-                      cp -r all-artifacts/qpdf-ios-simulator-$arch/* release/ios/simulator/$arch/
+                      cp -P extracted/ios-simulator-$arch/* release/ios/simulator/$arch/
                     fi
                   done
-                  if [ -d "all-artifacts/qpdf-ios-device-arm64" ]; then
+                  if [ -d "extracted/ios-device-arm64" ]; then
                     mkdir -p release/ios/device/arm64
-                    cp -r all-artifacts/qpdf-ios-device-arm64/* release/ios/device/arm64/
+                    cp -P extracted/ios-device-arm64/* release/ios/device/arm64/
                   fi
 
                   # Linux
                   for arch in arm64 x64 x86; do
-                    if [ -d "all-artifacts/qpdf-linux-$arch" ]; then
+                    if [ -d "extracted/linux-$arch" ]; then
                       mkdir -p release/linux/$arch
-                      cp -r all-artifacts/qpdf-linux-$arch/* release/linux/$arch/
+                      cp -P extracted/linux-$arch/* release/linux/$arch/
                     fi
                   done
 
                   # macOS
                   for arch in arm64 x64 univ; do
-                    if [ -d "all-artifacts/qpdf-macos-$arch" ]; then
+                    if [ -d "extracted/macos-$arch" ]; then
                       mkdir -p release/macos/$arch
-                      cp -r all-artifacts/qpdf-macos-$arch/* release/macos/$arch/
+                      cp -P extracted/macos-$arch/* release/macos/$arch/
                     fi
                   done
 
-                  # Show structure
+                  # Show structure with symlink info
                   echo "=== Release structure ==="
-                  find release -type f
+                  find release -type f -o -type l | while read f; do
+                    if [ -L "$f" ]; then
+                      echo "$f -> $(readlink "$f")"
+                    else
+                      echo "$f"
+                    fi
+                  done
+
+            - name: Create Final Tarball
+              run: |
+                  tar -cvhf qpdf-all-platforms.tar -C . release
 
             - name: Upload Combined Release
               uses: actions/upload-artifact@v4
               with:
                   name: qpdf-all-platforms
-                  path: release
+                  path: qpdf-all-platforms.tar
