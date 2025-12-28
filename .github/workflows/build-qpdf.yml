@@ -131,6 +131,7 @@ jobs:
                     -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
+                    -DCMAKE_MACOSX_BUNDLE=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
@@ -201,6 +202,7 @@ jobs:
                     -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
+                    -DCMAKE_MACOSX_BUNDLE=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
