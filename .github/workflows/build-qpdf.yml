@@ -67,18 +67,12 @@ jobs:
                   cd qpdf-src
                   mkdir build && cd build
 
-                  # Find the libjpeg we built
-                  JPEG_LIB=$(find ${{ github.workspace }}/deps-${{ matrix.arch }} -name "libjpeg.so" | head -1)
-                  JPEG_INC=${{ github.workspace }}/deps-${{ matrix.arch }}/include
-
                   cmake .. \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
                     -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_FIND_ROOT_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
-                    -DJPEG_LIBRARY=$JPEG_LIB \
-                    -DJPEG_INCLUDE_DIR=$JPEG_INC \
+                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
