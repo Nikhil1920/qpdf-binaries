@@ -9,7 +9,7 @@ on:
 
 env:
     QPDF_VERSION: "12.2.0"
-    LIBJPEG_TURBO_VERSION: "3.1.0"
+    LIBJPEG_TURBO_VERSION: "3.1.3"
     CMAKE_COMMON_FLAGS: "-DREQUIRE_CRYPTO_NATIVE=ON -DUSE_IMPLICIT_CRYPTO=0 -DCI_MODE=1 -DBUILD_DOC=OFF -DINSTALL_EXAMPLES=OFF"
 
 jobs:
@@ -53,7 +53,7 @@ jobs:
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
                     -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.arch }} \
                     -DENABLE_SHARED=ON \
                     -DENABLE_STATIC=OFF \
                     -DWITH_TURBOJPEG=OFF
@@ -64,12 +64,19 @@ jobs:
               run: |
                   cd qpdf-src
                   mkdir build && cd build
+
+                  # Find the libjpeg we built
+                  JPEG_LIB=$(find ${{ github.workspace }}/deps-${{ matrix.arch }} -name "libjpeg.so" | head -1)
+                  JPEG_INC=${{ github.workspace }}/deps-${{ matrix.arch }}/include
+
                   cmake .. \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
                     -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
+                    -DCMAKE_FIND_ROOT_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
+                    -DJPEG_LIBRARY=$JPEG_LIB \
+                    -DJPEG_INCLUDE_DIR=$JPEG_INC \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
@@ -79,7 +86,7 @@ jobs:
               run: |
                   mkdir -p artifacts/android-${{ matrix.arch }}
                   find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
-                  find ${{ github.workspace }}/deps -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
+                  find ${{ github.workspace }}/deps-${{ matrix.arch }} -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
