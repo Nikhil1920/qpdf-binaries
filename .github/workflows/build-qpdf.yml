@@ -48,14 +48,15 @@ jobs:
               run: |
                   cd libjpeg-turbo-src
                   mkdir build && cd build
-                  cmake .. \
-                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
-                    -DANDROID_ABI=${{ matrix.abi }} \
-                    -DANDROID_PLATFORM=android-21 \
-                    -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.arch }} \
-                    -DENABLE_SHARED=ON \
-                    -DENABLE_STATIC=OFF \
+                  cmake .. 
+                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake 
+                    -DANDROID_ABI=${{ matrix.abi }} 
+                    -DANDROID_PLATFORM=android-21 
+                    -DCMAKE_BUILD_TYPE=Release 
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.arch }} 
+                    -DENABLE_SHARED=OFF 
+                    -DENABLE_STATIC=ON 
+                    -DCMAKE_POSITION_INDEPENDENT_CODE=ON 
                     -DWITH_TURBOJPEG=OFF
                   cmake --build . --parallel $(nproc)
                   cmake --install .
@@ -65,22 +66,23 @@ jobs:
                   cd qpdf-src
                   mkdir build && cd build
 
-                  cmake .. \
-                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
-                    -DANDROID_ABI=${{ matrix.abi }} \
-                    -DANDROID_PLATFORM=android-21 \
-                    -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
-                    -DBUILD_SHARED_LIBS=ON \
-                    -DBUILD_STATIC_LIBS=OFF \
+                  export CMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }}
+                  export LDFLAGS="-L${{ github.workspace }}/deps-${{ matrix.arch }}/lib"
+                  cmake .. 
+                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake 
+                    -DANDROID_ABI=${{ matrix.abi }} 
+                    -DANDROID_PLATFORM=android-21 
+                    -DCMAKE_BUILD_TYPE=Release 
+                    -DBUILD_SHARED_LIBS=OFF 
+                    -DBUILD_STATIC_LIBS=ON 
                     ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/android-${{ matrix.arch }}
-                  find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
-                  find ${{ github.workspace }}/deps-${{ matrix.arch }} -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
+                  find qpdf-src/build/libqpdf -name "*.a" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
+                  find ${{ github.workspace }}/deps-${{ matrix.arch }} -name "*.a" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
