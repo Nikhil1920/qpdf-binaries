@@ -1,0 +1,535 @@
+name: Build QPDF Libraries
+
+on:
+    workflow_dispatch:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+env:
+    QPDF_VERSION: "12.2.0"
+    CMAKE_CRYPTO_FLAGS: "-DREQUIRE_CRYPTO_NATIVE=ON -DUSE_IMPLICIT_CRYPTO=0"
+
+jobs:
+    # ============================================================================
+    # Android Builds
+    # ============================================================================
+    build-android:
+        name: Android (${{ matrix.arch }})
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - arch: arm
+                      abi: armeabi-v7a
+                    - arch: arm64
+                      abi: arm64-v8a
+                    - arch: x64
+                      abi: x86_64
+                    - arch: x86
+                      abi: x86
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Android NDK
+              uses: android-actions/setup-android@v3
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+                    -DANDROID_ABI=${{ matrix.abi }} \
+                    -DANDROID_PLATFORM=android-21 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(nproc) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/android-${{ matrix.arch }}
+                  find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-android-${{ matrix.arch }}
+                  path: artifacts/android-${{ matrix.arch }}
+
+    # ============================================================================
+    # iOS Builds
+    # ============================================================================
+    build-ios-device:
+        name: iOS Device (arm64)
+        runs-on: macos-14
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF for iOS Device
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_SYSTEM_NAME=iOS \
+                    -DCMAKE_OSX_ARCHITECTURES=arm64 \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/ios-device-arm64
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-device-arm64/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-ios-device-arm64
+                  path: artifacts/ios-device-arm64
+
+    build-ios-simulator:
+        name: iOS Simulator (${{ matrix.arch }})
+        runs-on: macos-14
+        strategy:
+            fail-fast: false
+            matrix:
+                arch: [arm64, x86_64]
+                include:
+                    - arch: arm64
+                      artifact_name: arm64
+                    - arch: x86_64
+                      artifact_name: x64
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF for iOS Simulator
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_SYSTEM_NAME=iOS \
+                    -DCMAKE_OSX_SYSROOT=iphonesimulator \
+                    -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/ios-simulator-${{ matrix.artifact_name }}
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-ios-simulator-${{ matrix.artifact_name }}
+                  path: artifacts/ios-simulator-${{ matrix.artifact_name }}
+
+    build-ios-catalyst:
+        name: iOS Catalyst (${{ matrix.arch }})
+        runs-on: macos-14
+        strategy:
+            fail-fast: false
+            matrix:
+                arch: [arm64, x86_64]
+                include:
+                    - arch: arm64
+                      artifact_name: arm64
+                    - arch: x86_64
+                      artifact_name: x64
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF for Mac Catalyst
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+
+                  # Get the macOS SDK path
+                  SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
+
+                  cmake .. \
+                    -DCMAKE_SYSTEM_NAME=Darwin \
+                    -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+                    -DCMAKE_C_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH} -iframework ${SDK_PATH}/System/iOSSupport/System/Library/Frameworks" \
+                    -DCMAKE_CXX_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH} -iframework ${SDK_PATH}/System/iOSSupport/System/Library/Frameworks" \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/ios-catalyst-${{ matrix.artifact_name }}
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-ios-catalyst-${{ matrix.artifact_name }}
+                  path: artifacts/ios-catalyst-${{ matrix.artifact_name }}
+
+    # ============================================================================
+    # Linux Builds
+    # ============================================================================
+    build-linux-x64:
+        name: Linux (x64)
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install Dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y build-essential cmake zlib1g-dev libjpeg-dev
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(nproc) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/linux-x64
+                  find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x64/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-linux-x64
+                  path: artifacts/linux-x64
+
+    build-linux-arm64:
+        name: Linux (arm64)
+        runs-on: ubuntu-24.04-arm
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install Dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y build-essential cmake zlib1g-dev libjpeg-dev
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(nproc) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/linux-arm64
+                  find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-arm64/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-linux-arm64
+                  path: artifacts/linux-arm64
+
+    build-linux-x86:
+        name: Linux (x86)
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install Dependencies
+              run: |
+                  sudo dpkg --add-architecture i386
+                  sudo apt-get update
+                  sudo apt-get install -y gcc-multilib g++-multilib cmake zlib1g-dev:i386 libjpeg-dev:i386
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_C_FLAGS="-m32" \
+                    -DCMAKE_CXX_FLAGS="-m32" \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(nproc) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/linux-x86
+                  find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x86/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-linux-x86
+                  path: artifacts/linux-x86
+
+    # ============================================================================
+    # macOS Builds
+    # ============================================================================
+    build-macos:
+        name: macOS (${{ matrix.arch }})
+        runs-on: macos-14
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - arch: arm64
+                      cmake_arch: arm64
+                    - arch: x64
+                      cmake_arch: x86_64
+                    - arch: univ
+                      cmake_arch: "arm64;x86_64"
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Build QPDF
+              run: |
+                  cd qpdf-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBUILD_SHARED_LIBS=ON \
+                    -DBUILD_STATIC_LIBS=OFF \
+                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
+                    -DINSTALL_EXAMPLES=OFF \
+                    -DBUILD_DOC=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
+
+            - name: Collect Artifacts
+              run: |
+                  mkdir -p artifacts/macos-${{ matrix.arch }}
+                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/macos-${{ matrix.arch }}/ \;
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-macos-${{ matrix.arch }}
+                  path: artifacts/macos-${{ matrix.arch }}
+
+    # ============================================================================
+    # Windows Builds
+    # ============================================================================
+    build-windows:
+        name: Windows (${{ matrix.arch }})
+        runs-on: windows-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - arch: x64
+                      cmake_arch: x64
+                      msvc_arch: amd64
+                    - arch: x86
+                      cmake_arch: Win32
+                      msvc_arch: x86
+                    - arch: arm64
+                      cmake_arch: ARM64
+                      msvc_arch: amd64_arm64
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Clone QPDF
+              run: |
+                  git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+
+            - name: Setup MSVC
+              uses: ilammy/msvc-dev-cmd@v1
+              with:
+                  arch: ${{ matrix.msvc_arch }}
+
+            - name: Build QPDF
+              run: |
+                  cd qpdf-src
+                  mkdir build
+                  cd build
+                  cmake .. -G "Visual Studio 17 2022" -A ${{ matrix.cmake_arch }} `
+                    -DCMAKE_BUILD_TYPE=Release `
+                    -DBUILD_SHARED_LIBS=ON `
+                    -DBUILD_STATIC_LIBS=OFF `
+                    -DREQUIRE_CRYPTO_NATIVE=ON `
+                    -DUSE_IMPLICIT_CRYPTO=0 `
+                    -DINSTALL_EXAMPLES=OFF `
+                    -DBUILD_DOC=OFF
+                  cmake --build . --config Release --parallel --target libqpdf
+
+            - name: Collect Artifacts
+              shell: pwsh
+              run: |
+                  New-Item -ItemType Directory -Force -Path artifacts/windows-${{ matrix.arch }}
+                  Get-ChildItem -Path qpdf-src/build/libqpdf -Recurse -Include *.dll | Copy-Item -Destination artifacts/windows-${{ matrix.arch }}/
+
+            - name: Upload Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-windows-${{ matrix.arch }}
+                  path: artifacts/windows-${{ matrix.arch }}
+
+    # ============================================================================
+    # Combine All Artifacts
+    # ============================================================================
+    combine-artifacts:
+        name: Combine All Artifacts
+        runs-on: ubuntu-latest
+        needs:
+            - build-android
+            - build-ios-device
+            - build-ios-simulator
+            - build-ios-catalyst
+            - build-linux-x64
+            - build-linux-arm64
+            - build-linux-x86
+            - build-macos
+            - build-windows
+
+        steps:
+            - name: Download All Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: all-artifacts
+
+            - name: Organize Artifacts
+              run: |
+                  mkdir -p release/{android,ios,linux,macos,windows}
+
+                  # Android
+                  for arch in arm arm64 x64 x86; do
+                    if [ -d "all-artifacts/qpdf-android-$arch" ]; then
+                      mkdir -p release/android/$arch
+                      cp -r all-artifacts/qpdf-android-$arch/* release/android/$arch/
+                    fi
+                  done
+
+                  # iOS
+                  mkdir -p release/ios/{catalyst,device,simulator}
+                  for arch in arm64 x64; do
+                    if [ -d "all-artifacts/qpdf-ios-catalyst-$arch" ]; then
+                      mkdir -p release/ios/catalyst/$arch
+                      cp -r all-artifacts/qpdf-ios-catalyst-$arch/* release/ios/catalyst/$arch/
+                    fi
+                    if [ -d "all-artifacts/qpdf-ios-simulator-$arch" ]; then
+                      mkdir -p release/ios/simulator/$arch
+                      cp -r all-artifacts/qpdf-ios-simulator-$arch/* release/ios/simulator/$arch/
+                    fi
+                  done
+                  if [ -d "all-artifacts/qpdf-ios-device-arm64" ]; then
+                    mkdir -p release/ios/device/arm64
+                    cp -r all-artifacts/qpdf-ios-device-arm64/* release/ios/device/arm64/
+                  fi
+
+                  # Linux
+                  for arch in arm64 x64 x86; do
+                    if [ -d "all-artifacts/qpdf-linux-$arch" ]; then
+                      mkdir -p release/linux/$arch
+                      cp -r all-artifacts/qpdf-linux-$arch/* release/linux/$arch/
+                    fi
+                  done
+
+                  # macOS
+                  for arch in arm64 x64 univ; do
+                    if [ -d "all-artifacts/qpdf-macos-$arch" ]; then
+                      mkdir -p release/macos/$arch
+                      cp -r all-artifacts/qpdf-macos-$arch/* release/macos/$arch/
+                    fi
+                  done
+
+                  # Windows
+                  for arch in arm64 x64 x86; do
+                    if [ -d "all-artifacts/qpdf-windows-$arch" ]; then
+                      mkdir -p release/windows/$arch
+                      cp -r all-artifacts/qpdf-windows-$arch/* release/windows/$arch/
+                    fi
+                  done
+
+                  # Show structure
+                  find release -type f | head -50
+
+            - name: Upload Combined Release
+              uses: actions/upload-artifact@v4
+              with:
+                  name: qpdf-all-platforms
+                  path: release
