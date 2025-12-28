@@ -44,7 +44,7 @@ jobs:
                   mkdir build && cd build
                   cmake .. \
                     -DANDROID_ABI=${{ matrix.abi }} \
-                    -DANDROID_PLATFORM=android-21 \
+                    -DANDROID_PLATFORM=android-24 \
                     -DANDROID_STL=c++_shared \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DCMAKE_BUILD_TYPE=Release \
@@ -62,14 +62,13 @@ jobs:
 
                   cmake .. \
                     -DANDROID_ABI=${{ matrix.abi }} \
-                    -DANDROID_PLATFORM=android-21 \
+                    -DANDROID_PLATFORM=android-24 \
                     -DANDROID_STL=c++_shared \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
                     ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
