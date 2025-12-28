@@ -10,8 +10,6 @@ on:
 env:
     QPDF_VERSION: "12.2.0"
     LIBJPEG_TURBO_VERSION: "3.1.3"
-    # Use older libjpeg-turbo for iOS due to CMake cross-compile bug in 3.1.3
-    LIBJPEG_TURBO_VERSION_IOS: "3.0.4"
     CMAKE_COMMON_FLAGS: "-DREQUIRE_CRYPTO_NATIVE=ON -DUSE_IMPLICIT_CRYPTO=0 -DCI_MODE=1 -DBUILD_DOC=OFF -DINSTALL_EXAMPLES=OFF"
 
 jobs:
@@ -103,7 +101,7 @@ jobs:
             - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
-                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION_IOS }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
 
             - name: Build libjpeg-turbo
               run: |
@@ -117,7 +115,8 @@ jobs:
                     -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
                     -DENABLE_SHARED=ON \
                     -DENABLE_STATIC=OFF \
-                    -DWITH_TURBOJPEG=OFF
+                    -DWITH_TURBOJPEG=OFF \
+                    -DCMAKE_MACOSX_BUNDLE=OFF
                   cmake --build . --parallel $(sysctl -n hw.ncpu)
                   cmake --install .
 
@@ -167,7 +166,7 @@ jobs:
             - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
-                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION_IOS }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
 
             - name: Build libjpeg-turbo
               run: |
@@ -182,7 +181,8 @@ jobs:
                     -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
                     -DENABLE_SHARED=ON \
                     -DENABLE_STATIC=OFF \
-                    -DWITH_TURBOJPEG=OFF
+                    -DWITH_TURBOJPEG=OFF \
+                    -DCMAKE_MACOSX_BUNDLE=OFF
                   cmake --build . --parallel $(sysctl -n hw.ncpu)
                   cmake --install .
 
@@ -233,7 +233,7 @@ jobs:
             - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
-                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION_IOS }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
 
             - name: Build libjpeg-turbo for Mac Catalyst
               run: |
@@ -249,7 +249,8 @@ jobs:
                     -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
                     -DENABLE_SHARED=ON \
                     -DENABLE_STATIC=OFF \
-                    -DWITH_TURBOJPEG=OFF
+                    -DWITH_TURBOJPEG=OFF \
+                    -DCMAKE_MACOSX_BUNDLE=OFF
                   cmake --build . --parallel $(sysctl -n hw.ncpu)
                   cmake --install .
 
