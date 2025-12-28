@@ -9,7 +9,8 @@ on:
 
 env:
     QPDF_VERSION: "12.2.0"
-    CMAKE_CRYPTO_FLAGS: "-DREQUIRE_CRYPTO_NATIVE=ON -DUSE_IMPLICIT_CRYPTO=0"
+    LIBJPEG_TURBO_VERSION: "3.1.0"
+    CMAKE_COMMON_FLAGS: "-DREQUIRE_CRYPTO_NATIVE=ON -DUSE_IMPLICIT_CRYPTO=0 -DCI_MODE=1 -DBUILD_DOC=OFF -DINSTALL_EXAMPLES=OFF"
 
 jobs:
     # ============================================================================
@@ -38,9 +39,26 @@ jobs:
             - name: Setup Android NDK
               uses: android-actions/setup-android@v3
 
-            - name: Clone QPDF
+            - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+
+            - name: Build libjpeg-turbo
+              run: |
+                  cd libjpeg-turbo-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+                    -DANDROID_ABI=${{ matrix.abi }} \
+                    -DANDROID_PLATFORM=android-21 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
+                    -DENABLE_SHARED=ON \
+                    -DENABLE_STATIC=OFF \
+                    -DWITH_TURBOJPEG=OFF
+                  cmake --build . --parallel $(nproc)
+                  cmake --install .
 
             - name: Build QPDF
               run: |
@@ -51,17 +69,17 @@ jobs:
                     -DANDROID_ABI=${{ matrix.abi }} \
                     -DANDROID_PLATFORM=android-21 \
                     -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/android-${{ matrix.arch }}
                   find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -79,9 +97,26 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Clone QPDF
+            - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+
+            - name: Build libjpeg-turbo
+              run: |
+                  cd libjpeg-turbo-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_SYSTEM_NAME=iOS \
+                    -DCMAKE_OSX_ARCHITECTURES=arm64 \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
+                    -DENABLE_SHARED=ON \
+                    -DENABLE_STATIC=OFF \
+                    -DWITH_TURBOJPEG=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu)
+                  cmake --install .
 
             - name: Build QPDF for iOS Device
               run: |
@@ -92,17 +127,17 @@ jobs:
                     -DCMAKE_OSX_ARCHITECTURES=arm64 \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
                     -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-device-arm64
                   find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-device-arm64/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/ios-device-arm64/ \;
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -116,7 +151,6 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                arch: [arm64, x86_64]
                 include:
                     - arch: arm64
                       artifact_name: arm64
@@ -127,9 +161,27 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Clone QPDF
+            - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+
+            - name: Build libjpeg-turbo
+              run: |
+                  cd libjpeg-turbo-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_SYSTEM_NAME=iOS \
+                    -DCMAKE_OSX_SYSROOT=iphonesimulator \
+                    -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
+                    -DENABLE_SHARED=ON \
+                    -DENABLE_STATIC=OFF \
+                    -DWITH_TURBOJPEG=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu)
+                  cmake --install .
 
             - name: Build QPDF for iOS Simulator
               run: |
@@ -141,17 +193,17 @@ jobs:
                     -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
                     -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-simulator-${{ matrix.artifact_name }}
                   find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -165,7 +217,6 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                arch: [arm64, x86_64]
                 include:
                     - arch: arm64
                       artifact_name: arm64
@@ -176,35 +227,51 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Clone QPDF
+            - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+
+            - name: Build libjpeg-turbo for Mac Catalyst
+              run: |
+                  cd libjpeg-turbo-src
+                  mkdir build && cd build
+                  SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
+                  cmake .. \
+                    -DCMAKE_SYSTEM_NAME=Darwin \
+                    -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+                    -DCMAKE_C_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH}" \
+                    -DCMAKE_CXX_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH}" \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
+                    -DENABLE_SHARED=ON \
+                    -DENABLE_STATIC=OFF \
+                    -DWITH_TURBOJPEG=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu)
+                  cmake --install .
 
             - name: Build QPDF for Mac Catalyst
               run: |
                   cd qpdf-src
                   mkdir build && cd build
-
-                  # Get the macOS SDK path
                   SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
-
                   cmake .. \
                     -DCMAKE_SYSTEM_NAME=Darwin \
                     -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
                     -DCMAKE_C_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH} -iframework ${SDK_PATH}/System/iOSSupport/System/Library/Frameworks" \
                     -DCMAKE_CXX_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH} -iframework ${SDK_PATH}/System/iOSSupport/System/Library/Frameworks" \
                     -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-catalyst-${{ matrix.artifact_name }}
                   find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -239,15 +306,14 @@ jobs:
                     -DCMAKE_BUILD_TYPE=Release \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/linux-x64
                   find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x64/ \;
+                  cp -P /usr/lib/x86_64-linux-gnu/libjpeg.so* artifacts/linux-x64/ || true
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -279,15 +345,14 @@ jobs:
                     -DCMAKE_BUILD_TYPE=Release \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/linux-arm64
                   find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-arm64/ \;
+                  cp -P /usr/lib/aarch64-linux-gnu/libjpeg.so* artifacts/linux-arm64/ || true
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -322,15 +387,14 @@ jobs:
                     -DCMAKE_CXX_FLAGS="-m32" \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/linux-x86
                   find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x86/ \;
+                  cp -P /usr/lib/i386-linux-gnu/libjpeg.so* artifacts/linux-x86/ || true
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -359,9 +423,25 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Clone QPDF
+            - name: Clone Sources
               run: |
                   git clone --depth 1 --branch v${{ env.QPDF_VERSION }} https://github.com/qpdf/qpdf.git qpdf-src
+                  git clone --depth 1 --branch ${{ env.LIBJPEG_TURBO_VERSION }} https://github.com/libjpeg-turbo/libjpeg-turbo.git libjpeg-turbo-src
+
+            - name: Build libjpeg-turbo
+              run: |
+                  cd libjpeg-turbo-src
+                  mkdir build && cd build
+                  cmake .. \
+                    -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
+                    -DENABLE_SHARED=ON \
+                    -DENABLE_STATIC=OFF \
+                    -DWITH_TURBOJPEG=OFF
+                  cmake --build . --parallel $(sysctl -n hw.ncpu)
+                  cmake --install .
 
             - name: Build QPDF
               run: |
@@ -371,17 +451,17 @@ jobs:
                     -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
                     -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
-                    ${{ env.CMAKE_CRYPTO_FLAGS }} \
-                    -DINSTALL_EXAMPLES=OFF \
-                    -DBUILD_DOC=OFF
+                    ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/macos-${{ matrix.arch }}
                   find qpdf-src/build/libqpdf -name "*.dylib" -exec cp {} artifacts/macos-${{ matrix.arch }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp {} artifacts/macos-${{ matrix.arch }}/ \;
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -457,7 +537,8 @@ jobs:
                   done
 
                   # Show structure
-                  find release -type f | head -50
+                  echo "=== Release structure ==="
+                  find release -type f
 
             - name: Upload Combined Release
               uses: actions/upload-artifact@v4
