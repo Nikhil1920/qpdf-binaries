@@ -438,17 +438,63 @@ jobs:
             - name: Build libjpeg-turbo
               run: |
                   cd libjpeg-turbo-src
-                  mkdir build && cd build
-                  cmake .. \
-                    -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
-                    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-                    -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
-                    -DENABLE_SHARED=ON \
-                    -DENABLE_STATIC=OFF \
-                    -DWITH_TURBOJPEG=OFF
-                  cmake --build . --parallel $(sysctl -n hw.ncpu)
-                  cmake --install .
+
+                  if [[ "${{ matrix.arch }}" == "univ" ]]; then
+                    # Build separately for each architecture, then combine with lipo
+                    for arch in arm64 x86_64; do
+                      mkdir -p build-$arch && cd build-$arch
+                      cmake .. \
+                        -DCMAKE_OSX_ARCHITECTURES=$arch \
+                        -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+                        -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-$arch \
+                        -DENABLE_SHARED=ON \
+                        -DENABLE_STATIC=OFF \
+                        -DWITH_TURBOJPEG=OFF
+                      cmake --build . --parallel $(sysctl -n hw.ncpu)
+                      cmake --install .
+                      cd ..
+                    done
+                    
+                    # Create universal binary with lipo
+                    mkdir -p ${{ github.workspace }}/deps/lib
+                    mkdir -p ${{ github.workspace }}/deps/include
+                    cp -r ${{ github.workspace }}/deps-arm64/include/* ${{ github.workspace }}/deps/include/
+                    
+                    for lib in ${{ github.workspace }}/deps-arm64/lib/*.dylib; do
+                      libname=$(basename "$lib")
+                      # Skip symlinks, we'll recreate them
+                      if [[ -L "$lib" ]]; then
+                        continue
+                      fi
+                      lipo -create \
+                        "${{ github.workspace }}/deps-arm64/lib/$libname" \
+                        "${{ github.workspace }}/deps-x86_64/lib/$libname" \
+                        -output "${{ github.workspace }}/deps/lib/$libname"
+                    done
+                    
+                    # Recreate symlinks
+                    cd ${{ github.workspace }}/deps/lib
+                    for link in ${{ github.workspace }}/deps-arm64/lib/*.dylib; do
+                      if [[ -L "$link" ]]; then
+                        linkname=$(basename "$link")
+                        target=$(readlink "$link")
+                        ln -sf "$target" "$linkname"
+                      fi
+                    done
+                  else
+                    mkdir build && cd build
+                    cmake .. \
+                      -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
+                      -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+                      -DCMAKE_BUILD_TYPE=Release \
+                      -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
+                      -DENABLE_SHARED=ON \
+                      -DENABLE_STATIC=OFF \
+                      -DWITH_TURBOJPEG=OFF
+                    cmake --build . --parallel $(sysctl -n hw.ncpu)
+                    cmake --install .
+                  fi
 
             - name: Build QPDF
               run: |
