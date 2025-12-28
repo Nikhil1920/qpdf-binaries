@@ -48,7 +48,16 @@ jobs:
               run: |
                   cd libjpeg-turbo-src
                   mkdir build && cd build
-                  cmake .. -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-21 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.arch }} -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DWITH_TURBOJPEG=OFF
+                  cmake .. \
+                    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
+                    -DANDROID_ABI=${{ matrix.abi }} \
+                    -DANDROID_PLATFORM=android-21 \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.arch }} \
+                    -DENABLE_SHARED=OFF \
+                    -DENABLE_STATIC=ON \
+                    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+                    -DWITH_TURBOJPEG=OFF
                   cmake --build . --parallel $(nproc)
                   cmake --install .
 
@@ -91,11 +100,15 @@ jobs:
 
             - name: Build libjpeg-turbo
               run: |
+                  IOS_PLATFORMDIR=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform
+                  IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneOS*.sdk)
+                  export CFLAGS="-Wall -miphoneos-version-min=8.0 -funwind-tables"
+
                   cd libjpeg-turbo-src
                   mkdir build && cd build
                   cmake .. \
-                    -DCMAKE_SYSTEM_NAME=iOS \
                     -DCMAKE_OSX_ARCHITECTURES=arm64 \
+                    -DCMAKE_OSX_SYSROOT=${IOS_SYSROOT[0]} \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
                     -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps \
@@ -156,11 +169,14 @@ jobs:
 
             - name: Build libjpeg-turbo
               run: |
+                  IOS_PLATFORMDIR=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform
+                  IOS_SYSROOT=($IOS_PLATFORMDIR/Developer/SDKs/iPhoneSimulator*.sdk)
+                  export CFLAGS="-Wall -miphoneos-version-min=8.0 -funwind-tables"
+
                   cd libjpeg-turbo-src
                   mkdir build && cd build
                   cmake .. \
-                    -DCMAKE_SYSTEM_NAME=iOS \
-                    -DCMAKE_OSX_SYSROOT=iphonesimulator \
+                    -DCMAKE_OSX_SYSROOT=${IOS_SYSROOT[0]} \
                     -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
                     -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
                     -DCMAKE_BUILD_TYPE=Release \
@@ -227,7 +243,6 @@ jobs:
                   mkdir build && cd build
                   SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
                   cmake .. \
-                    -DCMAKE_SYSTEM_NAME=Darwin \
                     -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
                     -DCMAKE_C_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH}" \
                     -DCMAKE_CXX_FLAGS="-target ${{ matrix.arch }}-apple-ios14.0-macabi -isysroot ${SDK_PATH}" \
