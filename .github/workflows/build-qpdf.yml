@@ -37,6 +37,8 @@ jobs:
 
             - name: Setup Android NDK
               uses: android-actions/setup-android@v3
+              with:
+                  ndk-version: 29.0.14206865
 
             - name: Clone Sources
               run: |
