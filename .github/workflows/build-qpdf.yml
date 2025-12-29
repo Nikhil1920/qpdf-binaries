@@ -53,6 +53,7 @@ jobs:
                     -DENABLE_STATIC=OFF \
                     -DWITH_TURBOJPEG=OFF
                   cmake --build . --parallel $(nproc)
+                  file libjpeg.so
                   cmake --install .
 
             - name: Build QPDF
@@ -66,7 +67,7 @@ jobs:
                     -DANDROID_STL=c++_shared \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
                     -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
+                    -DCMAKE_FIND_ROOT_PATH=${{ github.workspace }}/deps-${{ matrix.arch }} \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
