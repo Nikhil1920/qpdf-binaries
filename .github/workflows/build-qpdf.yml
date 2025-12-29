@@ -48,14 +48,21 @@ jobs:
                   mkdir build && cd build
                   cmake .. \
                     -DANDROID_ABI=${{ matrix.abi }} \
-                    -DANDROID_PLATFORM=android-24 \
+                    -DANDROID_PLATFORM=android-21 \
                     -DANDROID_STL=c++_shared \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake \
                     -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps-${{ matrix.abi }} \
                     -DENABLE_SHARED=ON \
                     -DENABLE_STATIC=OFF \
-                    -DWITH_TURBOJPEG=OFF
+                    -DWITH_TURBOJPEG=OFF \
+                    -DCMAKE_C_FLAGS_RELEASE="-Oz -g0 -fdata-sections -ffunction-sections" \
+                    -DCMAKE_CXX_FLAGS_RELEASE="-Oz -g0 -fdata-sections -ffunction-sections" \
+                    -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
+                    -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections" \
+                    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+                    -DCMAKE_CXX_VISIBILITY_PRESET=hidden \
+                    -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON
                   cmake --build . --parallel $(sysctl -n hw.ncpu)
                   file libjpeg.so
                   cmake --install .
@@ -67,24 +74,23 @@ jobs:
                   cd qpdf-src
                   mkdir build && cd build
 
-                  echo "Current dir: $(pwd)"
-                  echo "It's contents:"
-                  ls -la
-
-                  # NDK sysroot must be included in CMAKE_FIND_ROOT_PATH for proper cross-compilation
-                  NDK_SYSROOT=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot
-
                   cmake .. \
                     -DANDROID_ABI=${{ matrix.abi }} \
-                    -DANDROID_PLATFORM=android-24 \
+                    -DANDROID_PLATFORM=android-21 \
                     -DANDROID_STL=c++_shared \
                     -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake \
                     -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.abi }} \
-                    -DCMAKE_FIND_ROOT_PATH="$NDK_SYSROOT;${{ github.workspace }}/deps-${{ matrix.abi }}" \
+                    -DCMAKE_FIND_ROOT_PATH="${{ github.workspace }}/deps-${{ matrix.abi }}" \
                     -DPKG_CONFIG_EXECUTABLE=NOTFOUND \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
+                    -DCMAKE_C_FLAGS_RELEASE="-Oz -g0 -fdata-sections -ffunction-sections" \
+                    -DCMAKE_CXX_FLAGS_RELEASE="-Oz -g0 -fdata-sections -ffunction-sections" \
+                    -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
+                    -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections" \
+                    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+                    -DCMAKE_CXX_VISIBILITY_PRESET=hidden \
+                    -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON \
                     ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
@@ -94,6 +100,9 @@ jobs:
                   find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
                   find ${{ github.workspace }}/deps-${{ matrix.abi }} -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
                   cp $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/${{ matrix.abi }}/libc++_shared.so artifacts/android-${{ matrix.arch }}/ || true
+                  NDK_STRIP=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip
+                  $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libqpdf.so
+                  $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libjpeg.so
                   tar -cvhf artifacts/android-${{ matrix.arch }}.tar -C artifacts android-${{ matrix.arch }}
 
             - name: Upload Artifacts
