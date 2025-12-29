@@ -67,8 +67,6 @@ jobs:
                   cd qpdf-src
                   mkdir build && cd build
 
-                  unset PKG_CONFIG_EXECUTABLE
-
                   echo "Current dir: $(pwd)"
                   echo "It's contents:"
                   ls -la
@@ -84,6 +82,7 @@ jobs:
                     -DCMAKE_BUILD_TYPE=Release \
                     -DCMAKE_PREFIX_PATH=${{ github.workspace }}/deps-${{ matrix.abi }} \
                     -DCMAKE_FIND_ROOT_PATH="$NDK_SYSROOT;${{ github.workspace }}/deps-${{ matrix.abi }}" \
+                    -DPKG_CONFIG_EXECUTABLE=NOTFOUND \
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
