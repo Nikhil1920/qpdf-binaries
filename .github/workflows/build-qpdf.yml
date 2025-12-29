@@ -18,14 +18,19 @@ jobs:
     # ============================================================================
     build-android:
         name: Android (${{ matrix.arch }})
-        runs-on: ubuntu-latest
+        runs-on: macos-14
         strategy:
             fail-fast: false
             matrix:
                 include:
+                    - arch: arm
+                      abi: armeabi-v7a
                     - arch: arm64
                       abi: arm64-v8a
-
+                    - arch: x64
+                      abi: x86_64
+                    - arch: x86
+                      abi: x86
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -40,6 +45,7 @@ jobs:
 
             - name: Build libjpeg-turbo
               run: |
+                  echo "Android NDK Root: $ANDROID_NDK_ROOT"
                   cd libjpeg-turbo-src
                   mkdir build && cd build
                   cmake .. \
@@ -52,7 +58,7 @@ jobs:
                     -DENABLE_SHARED=ON \
                     -DENABLE_STATIC=OFF \
                     -DWITH_TURBOJPEG=OFF
-                  cmake --build . --parallel $(nproc)
+                  cmake --build . --parallel $(sysctl -n hw.ncpu)
                   file libjpeg.so
                   cmake --install .
 
@@ -71,14 +77,14 @@ jobs:
                     -DBUILD_SHARED_LIBS=ON \
                     -DBUILD_STATIC_LIBS=OFF \
                     ${{ env.CMAKE_COMMON_FLAGS }}
-                  cmake --build . --parallel $(nproc) --target libqpdf
+                  cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/android-${{ matrix.arch }}
                   find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
                   find ${{ github.workspace }}/deps-${{ matrix.arch }} -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
-                  cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/${{ matrix.abi }}/libc++_shared.so artifacts/android-${{ matrix.arch }}/ || true
+                  cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/${{ matrix.abi }}/libc++_shared.so artifacts/android-${{ matrix.arch }}/ || true
                   tar -cvhf artifacts/android-${{ matrix.arch }}.tar -C artifacts android-${{ matrix.arch }}
 
             - name: Upload Artifacts
