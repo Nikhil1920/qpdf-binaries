@@ -67,6 +67,8 @@ jobs:
                   cd qpdf-src
                   mkdir build && cd build
 
+                  unset PKG_CONFIG_EXECUTABLE
+
                   echo "Current dir: $(pwd)"
                   echo "It's contents:"
                   ls -la
