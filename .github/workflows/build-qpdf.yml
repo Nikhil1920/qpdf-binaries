@@ -25,12 +25,16 @@ jobs:
                 include:
                     - arch: arm
                       abi: armeabi-v7a
+                      triple: arm-linux-androideabi
                     - arch: arm64
                       abi: arm64-v8a
+                      triple: aarch64-linux-android
                     - arch: x64
                       abi: x86_64
+                      triple: x86_64-linux-android
                     - arch: x86
                       abi: x86
+                      triple: i686-linux-android
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -99,10 +103,11 @@ jobs:
                   mkdir -p artifacts/android-${{ matrix.arch }}
                   find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
                   find ${{ github.workspace }}/deps-${{ matrix.abi }} -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
-                  cp $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/${{ matrix.abi }}/libc++_shared.so artifacts/android-${{ matrix.arch }}/ || true
-                  NDK_STRIP=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip
+                  cp $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/${{ matrix.triple }}/libc++_shared.so artifacts/android-${{ matrix.arch }}/
+                  NDK_STRIP=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip
                   $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libqpdf.so
                   $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libjpeg.so
+                  $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libc++_shared.so
                   tar -cvhf artifacts/android-${{ matrix.arch }}.tar -C artifacts android-${{ matrix.arch }}
 
             - name: Upload Artifacts
