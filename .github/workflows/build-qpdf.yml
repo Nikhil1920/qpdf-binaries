@@ -18,7 +18,7 @@ jobs:
     # ============================================================================
     build-android:
         name: Android (${{ matrix.arch }})
-        runs-on: macos-14
+        runs-on: ubuntu-22.04
         strategy:
             fail-fast: false
             matrix:
@@ -38,6 +38,15 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+
+            - name: Setup Android NDK
+              id: setup-ndk
+              uses: nttld/setup-ndk@v1
+              with:
+                  ndk-version: r26d
+
+            - name: Export NDK path
+              run: echo "ANDROID_NDK_LATEST_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
 
             - name: Clone Sources
               run: |
@@ -67,7 +76,7 @@ jobs:
                     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
                     -DCMAKE_CXX_VISIBILITY_PRESET=hidden \
                     -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON
-                  cmake --build . --parallel $(sysctl -n hw.ncpu)
+                  cmake --build . --parallel $(nproc)
                   file libjpeg.so
                   cmake --install .
 
@@ -96,15 +105,15 @@ jobs:
                     -DCMAKE_CXX_VISIBILITY_PRESET=hidden \
                     -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON \
                     ${{ env.CMAKE_COMMON_FLAGS }}
-                  cmake --build . --parallel $(sysctl -n hw.ncpu) --target libqpdf
+                  cmake --build . --parallel $(nproc) --target libqpdf
 
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/android-${{ matrix.arch }}
                   find qpdf-src/build/libqpdf -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
                   find ${{ github.workspace }}/deps-${{ matrix.abi }} -name "*.so" -exec cp {} artifacts/android-${{ matrix.arch }}/ \;
-                  cp $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/${{ matrix.triple }}/libc++_shared.so artifacts/android-${{ matrix.arch }}/
-                  NDK_STRIP=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-strip
+                  cp $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/${{ matrix.triple }}/libc++_shared.so artifacts/android-${{ matrix.arch }}/
+                  NDK_STRIP=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip
                   $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libqpdf.so
                   $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libjpeg.so
                   $NDK_STRIP --strip-unneeded artifacts/android-${{ matrix.arch }}/libc++_shared.so
