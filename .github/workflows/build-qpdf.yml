@@ -180,9 +180,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-device-arm64
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/ios-device-arm64/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/ios-device-arm64/ \;
-                  tar -cvhf artifacts/ios-device-arm64.tar -C artifacts ios-device-arm64
+                  # Copy only real files, not symlinks
+                  find qpdf-src/build/libqpdf -name "*.dylib" -type f -exec cp {} artifacts/ios-device-arm64/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -type f -exec cp {} artifacts/ios-device-arm64/ \;
+                  # Rename to simple names
+                  cd artifacts/ios-device-arm64
+                  for f in libqpdf.*.dylib; do [[ -f "$f" ]] && mv "$f" libqpdf.dylib; done
+                  for f in libjpeg.*.dylib; do [[ -f "$f" ]] && mv "$f" libjpeg.dylib; done
+                  cd ../..
+                  tar -cvf artifacts/ios-device-arm64.tar -C artifacts ios-device-arm64
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -252,9 +258,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-simulator-${{ matrix.artifact_name }}
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
-                  tar -cvhf artifacts/ios-simulator-${{ matrix.artifact_name }}.tar -C artifacts ios-simulator-${{ matrix.artifact_name }}
+                  # Copy only real files, not symlinks
+                  find qpdf-src/build/libqpdf -name "*.dylib" -type f -exec cp {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -type f -exec cp {} artifacts/ios-simulator-${{ matrix.artifact_name }}/ \;
+                  # Rename to simple names
+                  cd artifacts/ios-simulator-${{ matrix.artifact_name }}
+                  for f in libqpdf.*.dylib; do [[ -f "$f" ]] && mv "$f" libqpdf.dylib; done
+                  for f in libjpeg.*.dylib; do [[ -f "$f" ]] && mv "$f" libjpeg.dylib; done
+                  cd ../..
+                  tar -cvf artifacts/ios-simulator-${{ matrix.artifact_name }}.tar -C artifacts ios-simulator-${{ matrix.artifact_name }}
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -321,9 +333,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/ios-catalyst-${{ matrix.artifact_name }}
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
-                  tar -cvhf artifacts/ios-catalyst-${{ matrix.artifact_name }}.tar -C artifacts ios-catalyst-${{ matrix.artifact_name }}
+                  # Copy only real files, not symlinks
+                  find qpdf-src/build/libqpdf -name "*.dylib" -type f -exec cp {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -type f -exec cp {} artifacts/ios-catalyst-${{ matrix.artifact_name }}/ \;
+                  # Rename to simple names
+                  cd artifacts/ios-catalyst-${{ matrix.artifact_name }}
+                  for f in libqpdf.*.dylib; do [[ -f "$f" ]] && mv "$f" libqpdf.dylib; done
+                  for f in libjpeg.*.dylib; do [[ -f "$f" ]] && mv "$f" libjpeg.dylib; done
+                  cd ../..
+                  tar -cvf artifacts/ios-catalyst-${{ matrix.artifact_name }}.tar -C artifacts ios-catalyst-${{ matrix.artifact_name }}
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -364,9 +382,14 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/linux-x64
-                  find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x64/ \;
-                  cp -P /usr/lib/x86_64-linux-gnu/libjpeg.so* artifacts/linux-x64/ || true
-                  tar -cvhf artifacts/linux-x64.tar -C artifacts linux-x64
+                  # Copy only the actual versioned library and rename to simple name
+                  find qpdf-src/build/libqpdf -name "libqpdf.so.*.*.*" -type f -exec cp {} artifacts/linux-x64/libqpdf.so \;
+                  # Copy system libjpeg
+                  LIBJPEG_REAL=$(readlink -f /usr/lib/x86_64-linux-gnu/libjpeg.so 2>/dev/null || true)
+                  if [[ -n "$LIBJPEG_REAL" && -f "$LIBJPEG_REAL" ]]; then
+                    cp "$LIBJPEG_REAL" artifacts/linux-x64/libjpeg.so
+                  fi
+                  tar -cvf artifacts/linux-x64.tar -C artifacts linux-x64
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -404,9 +427,14 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/linux-arm64
-                  find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-arm64/ \;
-                  cp -P /usr/lib/aarch64-linux-gnu/libjpeg.so* artifacts/linux-arm64/ || true
-                  tar -cvhf artifacts/linux-arm64.tar -C artifacts linux-arm64
+                  # Copy only the actual versioned library and rename to simple name
+                  find qpdf-src/build/libqpdf -name "libqpdf.so.*.*.*" -type f -exec cp {} artifacts/linux-arm64/libqpdf.so \;
+                  # Copy system libjpeg
+                  LIBJPEG_REAL=$(readlink -f /usr/lib/aarch64-linux-gnu/libjpeg.so 2>/dev/null || true)
+                  if [[ -n "$LIBJPEG_REAL" && -f "$LIBJPEG_REAL" ]]; then
+                    cp "$LIBJPEG_REAL" artifacts/linux-arm64/libjpeg.so
+                  fi
+                  tar -cvf artifacts/linux-arm64.tar -C artifacts linux-arm64
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -447,9 +475,14 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/linux-x86
-                  find qpdf-src/build/libqpdf -name "*.so*" -exec cp -P {} artifacts/linux-x86/ \;
-                  cp -P /usr/lib/i386-linux-gnu/libjpeg.so* artifacts/linux-x86/ || true
-                  tar -cvhf artifacts/linux-x86.tar -C artifacts linux-x86
+                  # Copy only the actual versioned library and rename to simple name
+                  find qpdf-src/build/libqpdf -name "libqpdf.so.*.*.*" -type f -exec cp {} artifacts/linux-x86/libqpdf.so \;
+                  # Copy system libjpeg
+                  LIBJPEG_REAL=$(readlink -f /usr/lib/i386-linux-gnu/libjpeg.so 2>/dev/null || true)
+                  if [[ -n "$LIBJPEG_REAL" && -f "$LIBJPEG_REAL" ]]; then
+                    cp "$LIBJPEG_REAL" artifacts/linux-x86/libjpeg.so
+                  fi
+                  tar -cvf artifacts/linux-x86.tar -C artifacts linux-x86
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -513,9 +546,15 @@ jobs:
             - name: Collect Artifacts
               run: |
                   mkdir -p artifacts/macos-${{ matrix.arch }}
-                  find qpdf-src/build/libqpdf -name "*.dylib" -exec cp -P {} artifacts/macos-${{ matrix.arch }}/ \;
-                  find ${{ github.workspace }}/deps -name "*.dylib" -exec cp -P {} artifacts/macos-${{ matrix.arch }}/ \;
-                  tar -cvhf artifacts/macos-${{ matrix.arch }}.tar -C artifacts macos-${{ matrix.arch }}
+                  # Copy only real files, not symlinks
+                  find qpdf-src/build/libqpdf -name "*.dylib" -type f -exec cp {} artifacts/macos-${{ matrix.arch }}/ \;
+                  find ${{ github.workspace }}/deps -name "*.dylib" -type f -exec cp {} artifacts/macos-${{ matrix.arch }}/ \;
+                  # Rename to simple names
+                  cd artifacts/macos-${{ matrix.arch }}
+                  for f in libqpdf.*.dylib; do [[ -f "$f" ]] && mv "$f" libqpdf.dylib; done
+                  for f in libjpeg.*.dylib; do [[ -f "$f" ]] && mv "$f" libjpeg.dylib; done
+                  cd ../..
+                  tar -cvf artifacts/macos-${{ matrix.arch }}.tar -C artifacts macos-${{ matrix.arch }}
 
             - name: Upload Artifacts
               uses: actions/upload-artifact@v4
@@ -551,15 +590,9 @@ jobs:
               run: |
                   mkdir -p artifacts/macos-univ
 
-                  # Get list of dylibs from arm64 (excluding symlinks)
+                  # Create universal binaries for each dylib
                   for lib in extracted/macos-arm64/*.dylib; do
                     libname=$(basename "$lib")
-                    # Skip symlinks
-                    if [[ -L "$lib" ]]; then
-                      continue
-                    fi
-
-                    # Check if corresponding x64 lib exists
                     if [[ -f "extracted/macos-x64/$libname" ]]; then
                       lipo -create \
                         "extracted/macos-arm64/$libname" \
@@ -568,26 +601,15 @@ jobs:
                     fi
                   done
 
-                  # Recreate symlinks
-                  for link in extracted/macos-arm64/*.dylib; do
-                    if [[ -L "$link" ]]; then
-                      linkname=$(basename "$link")
-                      target=$(readlink "$link")
-                      ln -sf "$target" "artifacts/macos-univ/$linkname"
-                    fi
-                  done
-
                   # Verify universal binaries
                   echo "=== Universal binary verification ==="
                   for lib in artifacts/macos-univ/*.dylib; do
-                    if [[ ! -L "$lib" ]]; then
-                      echo "$lib:"
-                      lipo -info "$lib"
-                    fi
+                    echo "$lib:"
+                    lipo -info "$lib"
                   done
 
                   # Create tar for upload
-                  tar -cvhf artifacts/macos-univ.tar -C artifacts macos-univ
+                  tar -cvf artifacts/macos-univ.tar -C artifacts macos-univ
 
             - name: Upload Universal Artifacts
               uses: actions/upload-artifact@v4
