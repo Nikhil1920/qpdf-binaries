@@ -602,6 +602,8 @@ jobs:
         name: Create Release
         runs-on: ubuntu-latest
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        permissions:
+            contents: write
         needs:
             - build-android
             - build-ios-device
@@ -613,6 +615,9 @@ jobs:
             - build-macos
             - build-macos-universal
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
             - name: Download All Artifacts
               uses: actions/download-artifact@v4
               with:
