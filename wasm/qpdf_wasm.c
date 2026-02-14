@@ -167,7 +167,7 @@ int qpdf_wasm_is_linearized(qpdf_data qpdf) {
 
 EMSCRIPTEN_KEEPALIVE
 int qpdf_wasm_get_num_pages(qpdf_data qpdf) {
-    return qpdf_oh_num_pages(qpdf);
+    return qpdf_get_num_pages(qpdf);
 }
 
 EMSCRIPTEN_KEEPALIVE
