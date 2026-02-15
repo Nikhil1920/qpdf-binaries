@@ -63,7 +63,7 @@ jobs:
                     -DBUILD_SHARED_LIBS=OFF \
                     -DBUILD_STATIC_LIBS=ON \
                     -DRANDOM_DEVICE=/dev/urandom \
-                    -DCMAKE_CXX_FLAGS="-Oz -flto" \
+                    -DCMAKE_CXX_FLAGS="-Oz -flto -fexceptions" \
                     ${{ env.CMAKE_COMMON_FLAGS }}
                   cmake --build . --parallel $(nproc) --target libqpdf
 
@@ -73,7 +73,7 @@ jobs:
                   mkdir -p $WASM_OUT
 
                   emcc \
-                    -Oz -flto \
+                    -Oz -flto -fexceptions \
                     --closure 1 \
                     -I${{ github.workspace }}/wasm-deps/include \
                     -I${{ github.workspace }}/qpdf-src/include \
