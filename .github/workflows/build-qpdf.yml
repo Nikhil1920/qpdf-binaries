@@ -73,7 +73,7 @@ jobs:
                   mkdir -p $WASM_OUT
 
                   emcc \
-                    -Oz -flto \
+                    -Oz -flto -fexceptions \
                     --closure 1 \
                     -I${{ github.workspace }}/wasm-deps/include \
                     -I${{ github.workspace }}/qpdf-src/include \
