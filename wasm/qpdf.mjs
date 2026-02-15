@@ -46,12 +46,19 @@ export async function createQpdf(options = {}) {
     // ----- cwrap helpers for the C API -----
     const _init = Module.cwrap("qpdf_wasm_init", "number", []);
     const _cleanup = Module.cwrap("qpdf_wasm_cleanup", null, ["number"]);
-    const _readMemory = Module.cwrap("qpdf_wasm_read_memory", "number", [
-        "number",
-        "number",
-        "number",
-        "string",
+    // The C signature uses `unsigned long long size` which Emscripten legalizes
+    // into two i32 args (size_lo, size_hi). The exported WASM function therefore
+    // takes 5 args: (handle, buffer, size_lo, size_hi, password).
+    const _readMemoryRaw = Module.cwrap("qpdf_wasm_read_memory", "number", [
+        "number", // qpdf handle
+        "number", // buffer pointer
+        "number", // size low 32 bits
+        "number", // size high 32 bits (always 0 — PDFs < 4 GB)
+        "string", // password
     ]);
+    const _readMemory = (handle, ptr, size, password) => {
+        return _readMemoryRaw(handle, ptr, size, 0, password);
+    };
     const _emptyPdf = Module.cwrap("qpdf_wasm_empty_pdf", "number", ["number"]);
     const _initWriteMemory = Module.cwrap(
         "qpdf_wasm_init_write_memory",
@@ -132,8 +139,26 @@ export async function createQpdf(options = {}) {
     function throwIfError(handle) {
         if (_hasError(handle)) {
             const msg = _getErrorText(handle);
+            console.log("Has Error : ", msg);
             throw new Error(`qpdf error: ${msg}`);
+        } else {
+            console.log("No error");
         }
+    }
+
+    // ----- Helper: wrap WASM calls to catch raw Emscripten exception pointers -----
+    // Emscripten-compiled C++ can throw raw numeric heap pointers instead of Error
+    // objects. This helper re-throws proper Errors with the actual qpdf error text.
+    function rethrowWasmError(e, handle, fallbackMsg) {
+        if (e instanceof Error) throw e;
+        // Raw WASM pointer — try to extract the real error message from the handle
+        let msg;
+        try {
+            msg = _getErrorText(handle);
+        } catch (_) {
+            // handle may already be invalid
+        }
+        throw new Error(msg ? `qpdf error: ${msg}` : fallbackMsg);
     }
 
     // ===== Public API =====
@@ -143,6 +168,35 @@ export async function createQpdf(options = {}) {
          * The raw Emscripten Module, for advanced use.
          */
         _module: Module,
+
+        init: _init,
+        cleanup: _cleanup,
+        readMemory: _readMemory,
+        emptyPdf: _emptyPdf,
+        initWriteMemory: _initWriteMemory,
+        write: _write,
+        getBufferLength: _getBufferLength,
+        getBuffer: _getBuffer,
+        setLinearize: _setLinearize,
+        setCompress: _setCompress,
+        setPreserveEnc: _setPreserveEnc,
+        setDetId: _setDetId,
+        setQdf: _setQdf,
+        getPdfVersion: _getPdfVersion,
+        getNumPages: _getNumPages,
+        isEncrypted: _isEncrypted,
+        isLinearized: _isLinearized,
+        getInfoKey: _getInfoKey,
+        setInfoKey: _setInfoKey,
+        hasError: _hasError,
+        getErrorText: _getErrorText,
+        checkPdf: _checkPdf,
+        runJobJson: _runJobJson,
+        version: _version,
+
+        allocBytes,
+        throwIfError,
+        rethrowWasmError,
 
         /**
          * Emscripten virtual filesystem — use for CLI-style operations.
@@ -204,6 +258,12 @@ export async function createQpdf(options = {}) {
                     encrypted: _isEncrypted(handle) !== 0,
                     linearized: _isLinearized(handle) !== 0,
                 };
+            } catch (e) {
+                rethrowWasmError(
+                    e,
+                    handle,
+                    "Failed to read PDF. The file may be encrypted or corrupted.",
+                );
             } finally {
                 Module._free(ptr);
                 _cleanup(handle);
@@ -230,6 +290,8 @@ export async function createQpdf(options = {}) {
                 if (rc !== 0) throwIfError(handle);
                 const val = _getInfoKey(handle, key);
                 return val || null;
+            } catch (e) {
+                rethrowWasmError(e, handle, "Failed to read PDF metadata.");
             } finally {
                 Module._free(ptr);
                 _cleanup(handle);
@@ -288,6 +350,12 @@ export async function createQpdf(options = {}) {
                 const output = new Uint8Array(len);
                 output.set(Module.HEAPU8.subarray(outPtr, outPtr + len));
                 return output;
+            } catch (e) {
+                rethrowWasmError(
+                    e,
+                    handle,
+                    "Failed to process PDF. The password may be incorrect or the file may be corrupted.",
+                );
             } finally {
                 Module._free(ptr);
                 _cleanup(handle);
@@ -324,6 +392,12 @@ export async function createQpdf(options = {}) {
                     };
                 }
                 return { ok: true, error: null };
+            } catch (e) {
+                if (e instanceof Error) throw e;
+                return {
+                    ok: false,
+                    error: "Failed to check PDF. The file may be corrupted.",
+                };
             } finally {
                 Module._free(ptr);
                 _cleanup(handle);
